@@ -1,0 +1,433 @@
+-- 2018-04-18 Created by Helen Yeung 
+-- Source RA0139 CABLE Email Campaign
+-- Delinquent Contact Time Line
+-- Campaign 10, 31, 35, 40, 48, 51, 58, 67, 76, 81
+
+-- 10 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 10') AS campaign, 
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Email contact: courtesty contact first due date missed') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	NULL AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '41 day'::interval))
+		OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '41 day'::interval))) -- Connect date is greater than 35 days ago
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+		AND nsa::numeric = 1 -- delinquent status
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 1 (10 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------	
+
+UNION
+
+-- 31 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 31') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,	
+	trim('N,')||branch||trim(',')||account||trim(',Emailed: 31 Days Overdue Friendly Reminder') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	NULL AS lastdigit	
+		
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND  cbs_connect <= (now()::date - '62 day'::interval)) -- Connect date is greater than 61 days ago
+			OR (cbs_connect IS NULL AND  cbs_create <= (now()::date - '62 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 2 -- delinquent status
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 2 (31 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 35 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 35') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,	
+	trim('N,')||branch||trim(',')||account||trim(',Emailed: 35 Days Overdue Friendly Reminder') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	NULL AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	--AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	--AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND  cbs_connect <= (now()::date - '62 day'::interval)) -- Connect date is greater than 61 days ago
+			OR (cbs_connect IS NULL AND  cbs_create <= (now()::date - '62 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 2 -- delinquent status
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory (35 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 40 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 40') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Emailed: 40 Days Overdue Reminder') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '71 day'::interval)) -- Connect date is greater than 70 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '71 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 2 -- delinquent status
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 3 (40 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 48 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 48') AS campaign, 
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Emailed: 48 Days Overdue Reminder') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	NULL AS lastdigit
+
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	--AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	--AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '82 day'::interval)) -- Connect date is greater than 81 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '82 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 4
+	AND st11_flag LIKE  'No%'
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory (48 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 51 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 51') AS campaign, 
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Emailed: 51 Days Overdue Reminder') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,	
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '82 day'::interval)) -- Connect date is greater than 81 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '82 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 4
+	AND st11_flag LIKE  'No%'
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 4 (51 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 58 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 58') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Email contact attempt: non-pay downgrade sched. In 2-3 days') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P30'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '89 day'::interval)) -- Connect date is greater than 88 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '89 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 4
+	AND st11_flag LIKE  'No%'
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 5 (58 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 67 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 67') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Email contact attempt: account is at risk of disconnection') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P60'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '98 day'::interval)) -- Connect date is greater than 88 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '98 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 6
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory 6 (67 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 76 Day Email Campaign --
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 76') AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate,
+	trim('N,')||branch||trim(',')||account||trim(',Email contact attempt: account is at risk of disconnection') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	NULL AS lastdigit
+	
+FROM bi.ra0139_c
+WHERE reporttype = 'P60'
+	AND psgroup = 'Residential'
+	AND ra0139_c.psgroup <> 'Staff'
+	--AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+	--AND promisepay_expired = 'YES' -- No active payment arrangement.
+	AND cfpp = 'NO'  -- Is not active CFPP
+	AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+	AND ((cbs_connect IS NOT NULL AND cbs_connect <= (now()::date - '98 day'::interval)) -- Connect date is greater than 88 days ago
+			OR (cbs_connect IS NULL AND cbs_create <= (now()::date - '98 day'::interval)))
+	AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+	AND nsa::numeric >= 6
+	AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** Email Advisory (76 Day) *** --
+	AND
+	(	ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'
+		OR ra0139_c.cyc = '00'	)
+---------------------------------------
+
+UNION
+
+-- 81 Day Email Campaign PART I (p90)--
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 81') AS campaign,
+	--CASE WHEN lang = 'E' THEN trim('SAT En Day 81') ELSE  trim('SAT Fr Day 81') END AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate, 
+	trim('N,')||branch||trim(',')||account||trim(',Email contact attempt: account is at risk of disconnection') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+	
+FROM bi.ra0139_c
+	WHERE psgroup = 'Residential'
+	AND reporttype = 'P60'
+	AND ra0139_c.psgroup <> 'Staff'
+		AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+		AND aged_90plus >= 50 -- must be greater than or equal to $50 in 90+ Bucket 
+		--AND ( promisepay_date IS NULL OR promisepay_date <= now()::date ) -- no active payment arrangement
+		--AND promisepay_expired = 'YES' -- No active payment arrangement.
+		AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+		AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+
+---------------------------------------
+-- *** CABLE IVR Dial 7 (81 Day)  -- PART I
+	--*** P90 will need to use 20 cycle ahead of part II (P60), use 4 cycles together, need to check with yesterday cycles --
+		AND
+		(	ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'	)
+---------------------------------------		
+	
+UNION
+
+-- 81 Day Email Campaign PART II--
+SELECT reporttype AS report_type, branch AS system_code, account AS subs_acct_num, at_sub AS subs_acct_type, at_drop AS drop_acct_type, 
+	psgroup AS group, name_last AS subs_surname, name_first AS subs_given_name, address AS Drop_address, city AS city_name,
+	postal AS postal_code, areagrid AS Area_grid, pkg AS product_id, cyc AS billing_cycle_day , promisepay_date AS PMT_arrange_date, 
+	promisepay_expired AS expired, dctmdm_stat2 AS Has_RECEIVER_in_status2, dctmdm_flag AS HasDCTModem, dpt AS Has_DPT, cfpp AS has_active_CFPP,
+	equipment AS ModelType_SerialNo, balance AS curr_balance_amt, aged_current AS currAmt, aged_30 AS Aged30Amt, aged_60 AS Aged60Amt,
+	aged_60plus AS plus60, aged_90plus AS plus90, lastpayment_amount AS last_payment_amt, lastpayment_date::date AS last_payment_day, 
+	phone AS phone_numb, phone_alt AS alt_phone_num, lang AS correspondence_language_code, email_type AS Emailflag, email_address AS email_adress,
+	cbs_create::date AS CBS_create_day, cbs_connect AS connect_date, st11_flag AS inventory_equipment_in_status_11, cbs_confirm AS confirm_date, nsa AS delqnt_notice_sent_accum,
+	trim('CBL En Day 81') AS campaign,
+	--CASE WHEN lang = 'E' THEN trim('SAT En Day 81') ELSE  trim('SAT Fr Day 81') END AS campaign,
+	NULL AS dnc, now()::date -1 AS reportdate, 
+	trim('N,')||branch||trim(',')||account||trim(',Email contact attempt: account is at risk of disconnection') AS nsnote,
+	( aged_current + aged_30 +aged_60 + aged_90plus ) AS overdue,	
+	CASE WHEN ( RIGHT(account,1)::numeric = 7 OR RIGHT(account,1)::numeric = 8 OR RIGHT(account,1)::numeric = 9 ) THEN 'Y' ELSE 'N' END AS lastdigit
+	
+FROM bi.ra0139_c
+	WHERE psgroup = 'Residential'
+		AND reporttype = 'P60'
+		AND ra0139_c.psgroup <> 'Staff'
+		--AND pkg = 'NPD' -- Is Nonpay downgrade
+		AND cbs_confirm = 'N/A' -- Does not have work order confirm date
+		AND aged_90plus < 50  
+		AND aged_60plus >= 20
+		--AND char_length( regexp_replace(ra0139_c.phone, '[^0-9]'::text, ''::text, 'g'::text) ) = 10 -- Phone is 10 digits ONLY
+		AND ((cbs_connect IS NOT NULL AND cbs_connect <=  ( now()::date - '92 days'::interval )) -- Connect date is greater than 92 days ago
+			OR (cbs_connect IS NULL AND cbs_create <=  ( now()::date - '92 days'::interval )))
+		AND email_type LIKE any(array[ 'contact', 'ebilling/contact']) -- must have email
+		AND LEFT(email_address,3) NOT LIKE ' ; ' -- remove invalid email
+---------------------------------------
+-- *** CABLE IVR Dial 7 (81 Day)  -- PART II
+	
+		AND
+		(	ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'
+			OR ra0139_c.cyc = '00'	)
+---------------------------------------			
+
+ORDER BY campaign, nsnote
+
+-- END OF FILE --
+
+
